@@ -352,6 +352,11 @@ impl<'a> Plot<'a> {
         self
     }
 
+    pub fn closest_by_x(mut self, on: bool) -> Self {
+        self.closest_by_x = on;
+        self
+    }
+
     /// Config the button pointer to use for drag-to-pan. Default:
     /// [`Secondary`](PointerButton::Primary)
     #[inline]
