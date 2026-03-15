@@ -131,6 +131,8 @@ pub struct Plot<'a> {
     clamp_grid: bool,
 
     sense: Sense,
+
+    closest_by_x: bool,
 }
 
 impl<'a> Plot<'a> {
@@ -183,6 +185,8 @@ impl<'a> Plot<'a> {
             clamp_grid: false,
 
             sense: egui::Sense::click_and_drag(),
+
+            closest_by_x: false,
         }
     }
 
@@ -1535,17 +1539,24 @@ impl<'a> Plot<'a> {
             .filter(|entry| entry.allow_hover())
             .filter_map(|item| {
                 let item = &**item;
-                let closest = item.find_closest(pointer, transform);
-
+                let closest = if self.closest_by_x {
+                    item.find_closest_x(pointer, transform)
+                } else {
+                    item.find_closest(pointer, transform)
+                };
                 Some(item).zip(closest)
             });
 
         // Since many items can have same distance,
         // and dist_sq can be zero for some items (e.g. rectangle)
         // we pick topmost item within interact radius
-        let topmost = candidates
-            .filter(|(_, elem)| elem.dist_sq <= interact_radius_sq)
-            .next_back();
+        let topmost = if self.closest_by_x {
+            candidates.min_by(|x, y| x.1.dist_sq.total_cmp(&y.1.dist_sq))
+        } else {
+            candidates
+                .filter(|(_, elem)| elem.dist_sq <= interact_radius_sq)
+                .next_back()
+        };
 
         let plot = crate::PlotConfig {
             ui,

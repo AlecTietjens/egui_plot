@@ -63,6 +63,7 @@ pub struct PlotItemBase {
     id: Id,
     highlight: bool,
     allow_hover: bool,
+    closest_by_x: bool,
 }
 
 impl PlotItemBase {
@@ -74,6 +75,7 @@ impl PlotItemBase {
             id,
             highlight: false,
             allow_hover: true,
+            closest_by_x: false,
         }
     }
 }
@@ -157,6 +159,26 @@ pub trait PlotItem {
                     let pos = transform.position_from_point(value);
                     let dist_sq = point.distance_sq(pos);
                     ClosestElem { index, dist_sq }
+                })
+                .min_by_key(|e| e.dist_sq.ord()),
+
+            PlotGeometry::Rects => {
+                panic!("If the PlotItem is made of rects, it should implement find_closest()")
+            }
+        }
+    }
+
+    fn find_closest_x(&self, point: Pos2, transform: &PlotTransform) -> Option<ClosestElem> {
+        match self.geometry() {
+            PlotGeometry::None => None,
+
+            PlotGeometry::Points(points) => points
+                .iter()
+                .enumerate()
+                .map(|(index, value)| {
+                    let pos = transform.position_from_point(value);
+                    let dist_x = (point.x - pos.x).abs();
+                    ClosestElem { index, dist_sq: dist_x }
                 })
                 .min_by_key(|e| e.dist_sq.ord()),
 
