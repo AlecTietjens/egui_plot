@@ -1136,29 +1136,28 @@ impl<'a> Plot<'a> {
 
         // Drag axes to zoom:
         for d in 0..2 {
-            if self.allow_axis_zoom_drag[d] {
-                if let Some(axis_response) = axis_responses[d].iter().find(|r| r.dragged_by(PointerButton::Primary)) {
-                    if let Some(drag_start_pos) = ui.input(|i| i.pointer.press_origin()) {
-                        let delta = axis_response.drag_delta();
+            if self.allow_axis_zoom_drag[d]
+                && let Some(axis_response) = axis_responses[d].iter().find(|r| r.dragged_by(PointerButton::Primary))
+                && let Some(drag_start_pos) = ui.input(|i| i.pointer.press_origin())
+            {
+                let delta = axis_response.drag_delta();
 
-                        let axis_zoom = 1.0 + (0.02 * delta[d]).clamp(-1.0, 1.0);
+                let axis_zoom = 1.0 + (0.02 * delta[d]).clamp(-1.0, 1.0);
 
-                        let zoom = if self.data_aspect.is_some() {
-                            // Zoom both axes equally to maintain aspect ratio:
-                            Vec2::splat(axis_zoom)
-                        } else {
-                            let mut zoom = Vec2::splat(1.0);
-                            zoom[d] = axis_zoom;
-                            zoom
-                        };
+                let zoom = if self.data_aspect.is_some() {
+                    // Zoom both axes equally to maintain aspect ratio:
+                    Vec2::splat(axis_zoom)
+                } else {
+                    let mut zoom = Vec2::splat(1.0);
+                    zoom[d] = axis_zoom;
+                    zoom
+                };
 
-                        if zoom != Vec2::splat(1.0) {
-                            let mut zoom_center = plot_rect.center();
-                            zoom_center[d] = drag_start_pos[d];
-                            mem.transform.zoom(zoom, zoom_center);
-                            mem.auto_bounds = false.into();
-                        }
-                    }
+                if zoom != Vec2::splat(1.0) {
+                    let mut zoom_center = plot_rect.center();
+                    zoom_center[d] = drag_start_pos[d];
+                    mem.transform.zoom(zoom, zoom_center);
+                    mem.auto_bounds = false.into();
                 }
             }
         }
@@ -1275,7 +1274,7 @@ impl<'a> Plot<'a> {
         for widget in &mut axis_widgets[0] {
             widget.range = x_axis_range.clone();
             widget.transform = Some(mem.transform);
-            widget.steps = x_steps.clone();
+            widget.steps = Arc::clone(&x_steps);
         }
         let x_axis_widgets = std::mem::take(&mut axis_widgets[0]);
         for (i, widget) in x_axis_widgets.into_iter().enumerate() {
@@ -1287,7 +1286,7 @@ impl<'a> Plot<'a> {
         for widget in &mut axis_widgets[1] {
             widget.range = y_axis_range.clone();
             widget.transform = Some(mem.transform);
-            widget.steps = y_steps.clone();
+            widget.steps = Arc::clone(&y_steps);
         }
         let y_axis_widgets = std::mem::take(&mut axis_widgets[1]);
         for (i, widget) in y_axis_widgets.into_iter().enumerate() {
@@ -1570,7 +1569,7 @@ impl<'a> Plot<'a> {
 
         let interact_radius_sq = ui.style().interaction.interact_radius.powi(2);
 
-        let candidates = plot_ui
+        let mut candidates = plot_ui
             .items
             .iter()
             .filter(|entry| entry.allow_hover())
